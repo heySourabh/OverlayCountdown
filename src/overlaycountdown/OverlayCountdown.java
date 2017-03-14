@@ -5,12 +5,18 @@ import java.util.function.Predicate;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -28,7 +34,9 @@ import javafx.stage.StageStyle;
  */
 public class OverlayCountdown extends Application {
 
-    final double FONT_SIZE = 80;
+    final double FONT_SIZE = 60;
+    final Image icon_32x32 = new Image(this.getClass().getResourceAsStream("/images/timer_32x32.png"));
+    final Image icon_64x64 = new Image(this.getClass().getResourceAsStream("/images/timer_64x64.png"));
 
     public static void main(String[] args) {
         launch(args);
@@ -53,18 +61,31 @@ public class OverlayCountdown extends Application {
 
         HBox root = new HBox(hrs, colon1, mins, colon2, secs);
         root.setBackground(Background.EMPTY);
+        root.setEffect(new DropShadow(2, 5, 5, Color.GRAY));
+        root.setCursor(Cursor.MOVE);
+        grabAndDrag(root, primaryStage);
+        createContextMenu(root, primaryStage, hrs, mins, secs);
 
         Scene scene = new Scene(root, Color.TRANSPARENT);
         primaryStage.setScene(scene);
 
         primaryStage.initStyle(StageStyle.TRANSPARENT);
+        primaryStage.getIcons().add(icon_32x32);
+        primaryStage.getIcons().add(icon_64x64);
         primaryStage.setAlwaysOnTop(true);
         primaryStage.setTitle("Countdown");
         primaryStage.show();
 
+        setupAndStartTimer(primaryStage, hrs, mins, secs);
+    }
+
+    private void setupAndStartTimer(Stage primaryStage, Text hrs, Text mins, Text secs) {
         int timeInSecs = getDutarionFromUser(primaryStage);
 
         System.out.println(timeInSecs);
+        if (timeInSecs == 0) {
+            Platform.exit();
+        }
 
         startTimer(hrs, mins, secs, timeInSecs, primaryStage);
     }
@@ -135,10 +156,13 @@ public class OverlayCountdown extends Application {
         return (num < 0) ? 0 : num;
     }
 
+    static volatile boolean timerRunning = false;
+
     private void startTimer(Text hrsText, Text minsText, Text secsText, int timeInSec, Stage parent) {
         Thread timerThread = new Thread(() -> {
             int timeInSecs = timeInSec;
-            while (timeInSecs >= 0 && parent.isShowing()) {
+            timerRunning = true;
+            while (timerRunning && timeInSecs >= 0 && parent.isShowing()) {
                 int hrs = timeInSecs / 60 / 60;
                 int mins = (timeInSecs - hrs * 60 * 60) / 60;
                 int secs = (timeInSecs - hrs * 60 * 60 - mins * 60);
@@ -149,7 +173,9 @@ public class OverlayCountdown extends Application {
                 LockSupport.parkNanos(1_000_000_000);
                 timeInSecs--;
             }
-            playNotificationSound(parent);
+            if (timerRunning) {
+                playNotificationSound(parent);
+            }
         });
         timerThread.start();
     }
@@ -171,6 +197,53 @@ public class OverlayCountdown extends Application {
             timeUpAlert.showAndWait();
             mp.stop();
             parent.hide();
+        });
+    }
+
+    double startX;
+    double startY;
+    double posX;
+    double posY;
+
+    private void grabAndDrag(Node root, Stage stage) {
+        root.setOnMousePressed(e -> {
+            startX = e.getScreenX();
+            startY = e.getScreenY();
+            posX = stage.getX();
+            posY = stage.getY();
+        });
+        root.setOnMouseDragged(e -> {
+
+            double currX = e.getScreenX();
+            double currY = e.getScreenY();
+            double dx = currX - startX;
+            double dy = currY - startY;
+
+            stage.setX(posX + dx);
+            stage.setY(posY + dy);
+        });
+    }
+
+    private void createContextMenu(Node root, Stage stage, Text hrs, Text mins, Text secs) {
+        ContextMenu menu = new ContextMenu();
+
+        MenuItem exitItem = new MenuItem("Exit");
+        exitItem.setOnAction(e -> Platform.exit());
+        menu.getItems().add(exitItem);
+
+        MenuItem resetItem = new MenuItem("Reset...");
+        resetItem.setOnAction(e -> {
+            timerRunning = false;
+            setupAndStartTimer(stage, hrs, mins, secs);
+        });
+        menu.getItems().add(resetItem);
+
+        root.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.SECONDARY) {
+                menu.show(root, e.getScreenX(), e.getScreenY());
+            } else {
+                menu.hide();
+            }
         });
     }
 }
