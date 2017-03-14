@@ -17,6 +17,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
@@ -113,6 +114,8 @@ public class OverlayCountdown extends Application {
         };
 
         Dialog dialog = new Dialog();
+        dialog.setTitle("Enter duration");
+        dialog.setGraphic(new ImageView(icon_64x64));
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         Node okButton = dialog.getDialogPane().lookupButton(ButtonType.OK);
         okButton.setDisable(true);
