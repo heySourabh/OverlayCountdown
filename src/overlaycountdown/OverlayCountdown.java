@@ -1,5 +1,6 @@
 package overlaycountdown;
 
+import java.util.Optional;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Predicate;
 import javafx.application.Application;
@@ -38,6 +39,8 @@ public class OverlayCountdown extends Application {
     final Image icon_32x32 = new Image(this.getClass().getResourceAsStream("/images/timer_32x32.png"));
     final Image icon_64x64 = new Image(this.getClass().getResourceAsStream("/images/timer_64x64.png"));
     static String displayMessage = "Time Up!!";
+    static volatile int totalTime = 0;
+    static volatile int timeRemaining = 0;
 
     public static void main(String[] args) {
         launch(args);
@@ -65,7 +68,7 @@ public class OverlayCountdown extends Application {
         root.setEffect(new DropShadow(2, 5, 5, Color.GRAY));
         root.setCursor(Cursor.MOVE);
         grabAndDrag(root, primaryStage);
-        createContextMenu(root, primaryStage, hrs, mins, secs);
+        createContextMenu(root, primaryStage);
 
         Scene scene = new Scene(root, Color.TRANSPARENT);
         primaryStage.setScene(scene);
@@ -77,18 +80,21 @@ public class OverlayCountdown extends Application {
         primaryStage.setTitle("Countdown");
         primaryStage.show();
 
-        setupAndStartTimer(primaryStage, hrs, mins, secs);
-    }
-
-    private void setupAndStartTimer(Stage primaryStage, Text hrs, Text mins, Text secs) {
-        int timeInSecs = getDutarionFromUser(primaryStage);
-
-        System.out.println(timeInSecs);
+        int timeInSecs = setupTimer(primaryStage);
         if (timeInSecs == 0) {
             Platform.exit();
         }
+        startTimer(hrs, mins, secs, primaryStage);
+    }
 
-        startTimer(hrs, mins, secs, timeInSecs, primaryStage);
+    private int setupTimer(Stage primaryStage) {
+        int timeInSecs = getDutarionFromUser(primaryStage);
+        System.out.println(timeInSecs);
+        if (timeInSecs != 0) {
+            timeRemaining = timeInSecs;
+            totalTime = timeInSecs;
+        }
+        return timeInSecs;
     }
 
     private int getDutarionFromUser(Stage parent) {
@@ -103,7 +109,7 @@ public class OverlayCountdown extends Application {
             } catch (NumberFormatException ex) {
                 return false;
             }
-            return time > 0 && time <= 60;
+            return time > 0 && time < 60;
         };
 
         Dialog dialog = new Dialog();
@@ -114,22 +120,41 @@ public class OverlayCountdown extends Application {
         GridPane pane = new GridPane();
 
         TextField hrs = new TextField();
+        TextField mins = new TextField();
+        TextField secs = new TextField();
+
         hrs.setPrefColumnCount(3);
         hrs.setPromptText("hrs");
         hrs.setAlignment(Pos.CENTER);
-        hrs.textProperty().addListener(l -> okButton.setDisable(!textFieldValidation.test(hrs)));
+        hrs.textProperty().addListener(l -> {
+            okButton.setDisable(
+                    !textFieldValidation.test(hrs)
+                    || !textFieldValidation.test(mins)
+                    || !textFieldValidation.test(secs)
+            );
+        });
 
-        TextField mins = new TextField();
         mins.setPrefColumnCount(3);
         mins.setPromptText("mins");
         mins.setAlignment(Pos.CENTER);
-        mins.textProperty().addListener(l -> okButton.setDisable(!textFieldValidation.test(mins)));
+        mins.textProperty().addListener(l -> {
+            okButton.setDisable(
+                    !textFieldValidation.test(hrs)
+                    || !textFieldValidation.test(mins)
+                    || !textFieldValidation.test(secs)
+            );
+        });
 
-        TextField secs = new TextField();
         secs.setPrefColumnCount(3);
         secs.setPromptText("secs");
         secs.setAlignment(Pos.CENTER);
-        secs.textProperty().addListener(l -> okButton.setDisable(!textFieldValidation.test(secs)));
+        secs.textProperty().addListener(l -> {
+            okButton.setDisable(
+                    !textFieldValidation.test(hrs)
+                    || !textFieldValidation.test(mins)
+                    || !textFieldValidation.test(secs)
+            );
+        });
 
         pane.addRow(0, hrs,
                 new Text(":"), mins,
@@ -141,8 +166,14 @@ public class OverlayCountdown extends Application {
         dialog.getDialogPane().setContent(pane);
         dialog.initOwner(parent);
 
-        dialog.showAndWait();
-        displayMessage = msgTextField.getText();
+        Optional<ButtonType> buttonType = dialog.showAndWait();
+        if (buttonType.get() == ButtonType.OK) {
+            displayMessage = msgTextField.getText();
+        } else {
+            hrs.setText("");
+            mins.setText("");
+            secs.setText("");
+        }
         return getTimeInSecs(hrs, mins, secs);
     }
 
@@ -154,6 +185,16 @@ public class OverlayCountdown extends Application {
         return hrs * 60 * 60 + mins * 60 + secs;
     }
 
+    private String getTimeString(int timeInSecs) {
+        int hrs = timeInSecs / 60 / 60;
+        int mins = (timeInSecs - hrs * 60 * 60) / 60;
+        int secs = (timeInSecs - hrs * 60 * 60 - mins * 60);
+
+        return String.format("%02d:", hrs)
+                + String.format("%02d:", mins)
+                + String.format("%02d", secs);
+    }
+
     private int toInt(String str) {
         int num = str.trim().equals("")
                 ? 0
@@ -161,26 +202,20 @@ public class OverlayCountdown extends Application {
         return (num < 0) ? 0 : num;
     }
 
-    static volatile boolean timerRunning = false;
-
-    private void startTimer(Text hrsText, Text minsText, Text secsText, int timeInSec, Stage parent) {
+    private void startTimer(Text hrsText, Text minsText, Text secsText, Stage parent) {
         Thread timerThread = new Thread(() -> {
-            int timeInSecs = timeInSec;
-            timerRunning = true;
-            while (timerRunning && timeInSecs >= 0 && parent.isShowing()) {
-                int hrs = timeInSecs / 60 / 60;
-                int mins = (timeInSecs - hrs * 60 * 60) / 60;
-                int secs = (timeInSecs - hrs * 60 * 60 - mins * 60);
+            while (timeRemaining >= 0 && parent.isShowing()) {
+                int hrs = timeRemaining / 60 / 60;
+                int mins = (timeRemaining - hrs * 60 * 60) / 60;
+                int secs = (timeRemaining - hrs * 60 * 60 - mins * 60);
 
                 hrsText.setText(String.format("%02d", hrs));
                 minsText.setText(String.format("%02d", mins));
                 secsText.setText(String.format("%02d", secs));
                 LockSupport.parkNanos(1_000_000_000);
-                timeInSecs--;
+                timeRemaining--;
             }
-            if (timerRunning) {
-                playNotificationSound(parent);
-            }
+            playNotificationSound(parent);
         });
         timerThread.start();
     }
@@ -196,7 +231,7 @@ public class OverlayCountdown extends Application {
                     .getResource("/sounds/Ringing-clock.mp3").toString()));
             mp.play();
             Alert timeUpAlert = new Alert(Alert.AlertType.INFORMATION);
-            timeUpAlert.setTitle("Time up");
+            timeUpAlert.setTitle("Time up (" + getTimeString(totalTime) + ")");
             timeUpAlert.setHeaderText(displayMessage);
             timeUpAlert.initOwner(parent);
             timeUpAlert.showAndWait();
@@ -229,17 +264,14 @@ public class OverlayCountdown extends Application {
         });
     }
 
-    private void createContextMenu(Node root, Stage stage, Text hrs, Text mins, Text secs) {
+    private void createContextMenu(Node root, Stage stage) {
         ContextMenu menu = new ContextMenu();
 
         MenuItem exitItem = new MenuItem("Exit");
         exitItem.setOnAction(e -> Platform.exit());
 
         MenuItem resetItem = new MenuItem("Reset...");
-        resetItem.setOnAction(e -> {
-            timerRunning = false;
-            setupAndStartTimer(stage, hrs, mins, secs);
-        });
+        resetItem.setOnAction(e -> setupTimer(stage));
 
         menu.getItems().addAll(resetItem, exitItem);
 
