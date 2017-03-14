@@ -3,9 +3,11 @@ package overlaycountdown;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Predicate;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.TextField;
@@ -147,19 +149,28 @@ public class OverlayCountdown extends Application {
                 LockSupport.parkNanos(1_000_000_000);
                 timeInSecs--;
             }
-            playNotificationSound();
+            playNotificationSound(parent);
         });
         timerThread.start();
     }
 
-    private void playNotificationSound() {
+    private void playNotificationSound(Stage parent) {
         /*
          * The sound effect is permitted for commercial use under 
          * license Creative Commons Attribution 4.0 International License.
          * Downloaded from "http://www.orangefreesounds.com/ringing-clock/"
          */
-        MediaPlayer mp = new MediaPlayer(new Media(this.getClass()
-                .getResource("/sounds/Ringing-clock.mp3").toString()));
-        mp.play();
+        Platform.runLater(() -> {
+            MediaPlayer mp = new MediaPlayer(new Media(this.getClass()
+                    .getResource("/sounds/Ringing-clock.mp3").toString()));
+            mp.play();
+            Alert timeUpAlert = new Alert(Alert.AlertType.INFORMATION);
+            timeUpAlert.setTitle("Time up");
+            timeUpAlert.setHeaderText("Time up!!");
+            timeUpAlert.initOwner(parent);
+            timeUpAlert.showAndWait();
+            mp.stop();
+            parent.hide();
+        });
     }
 }
