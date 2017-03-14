@@ -65,7 +65,7 @@ public class OverlayCountdown extends Application {
 
         HBox root = new HBox(hrs, colon1, mins, colon2, secs);
         root.setBackground(Background.EMPTY);
-        root.setEffect(new DropShadow(2, 5, 5, Color.GRAY));
+        root.setEffect(new DropShadow(3, 2, 5, Color.GRAY));
         root.setCursor(Cursor.MOVE);
         grabAndDrag(root, primaryStage);
         createContextMenu(root, primaryStage);
@@ -160,7 +160,9 @@ public class OverlayCountdown extends Application {
                 new Text(":"), mins,
                 new Text(":"), secs);
 
+        pane.setVgap(5);
         TextField msgTextField = new TextField(displayMessage);
+        msgTextField.setPromptText("Display Message");
         pane.add(msgTextField, 0, 1, 5, 1);
 
         dialog.getDialogPane().setContent(pane);
