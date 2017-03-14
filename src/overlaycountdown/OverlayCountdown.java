@@ -37,6 +37,7 @@ public class OverlayCountdown extends Application {
     final double FONT_SIZE = 60;
     final Image icon_32x32 = new Image(this.getClass().getResourceAsStream("/images/timer_32x32.png"));
     final Image icon_64x64 = new Image(this.getClass().getResourceAsStream("/images/timer_64x64.png"));
+    static String displayMessage = "Time Up!!";
 
     public static void main(String[] args) {
         launch(args);
@@ -134,10 +135,14 @@ public class OverlayCountdown extends Application {
                 new Text(":"), mins,
                 new Text(":"), secs);
 
+        TextField msgTextField = new TextField(displayMessage);
+        pane.add(msgTextField, 0, 1, 5, 1);
+
         dialog.getDialogPane().setContent(pane);
         dialog.initOwner(parent);
 
         dialog.showAndWait();
+        displayMessage = msgTextField.getText();
         return getTimeInSecs(hrs, mins, secs);
     }
 
@@ -192,7 +197,7 @@ public class OverlayCountdown extends Application {
             mp.play();
             Alert timeUpAlert = new Alert(Alert.AlertType.INFORMATION);
             timeUpAlert.setTitle("Time up");
-            timeUpAlert.setHeaderText("Time up!!");
+            timeUpAlert.setHeaderText(displayMessage);
             timeUpAlert.initOwner(parent);
             timeUpAlert.showAndWait();
             mp.stop();
@@ -229,14 +234,14 @@ public class OverlayCountdown extends Application {
 
         MenuItem exitItem = new MenuItem("Exit");
         exitItem.setOnAction(e -> Platform.exit());
-        menu.getItems().add(exitItem);
 
         MenuItem resetItem = new MenuItem("Reset...");
         resetItem.setOnAction(e -> {
             timerRunning = false;
             setupAndStartTimer(stage, hrs, mins, secs);
         });
-        menu.getItems().add(resetItem);
+
+        menu.getItems().addAll(resetItem, exitItem);
 
         root.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.SECONDARY) {
