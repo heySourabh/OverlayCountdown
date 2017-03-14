@@ -110,7 +110,7 @@ public class OverlayCountdown extends Application {
             } catch (NumberFormatException ex) {
                 return false;
             }
-            return time > 0 && time < 60;
+            return time >= 0 && time < 60;
         };
 
         Dialog dialog = new Dialog();
