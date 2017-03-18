@@ -16,6 +16,7 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.effect.Glow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
@@ -66,9 +67,13 @@ public class OverlayCountdown extends Application {
 
         HBox root = new HBox(hrs, colon1, mins, colon2, secs);
         root.setBackground(Background.EMPTY);
-        root.setEffect(new DropShadow(3, 2, 5, Color.GRAY));
+        DropShadow shadow = new DropShadow(3, 2, 5, Color.GRAY);
+        Glow glow = new Glow(0.5);
+        root.setEffect(shadow);
         root.setCursor(Cursor.MOVE);
         grabAndDrag(root, primaryStage);
+        root.setOnMouseEntered(e -> shadow.setInput(glow));
+        root.setOnMouseExited(e -> shadow.setInput(null));
         createContextMenu(root, primaryStage);
 
         Scene scene = new Scene(root, Color.TRANSPARENT);
