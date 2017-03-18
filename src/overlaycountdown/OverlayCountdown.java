@@ -43,6 +43,7 @@ public class OverlayCountdown extends Application {
     static String displayMessage = "Time Up!!";
     static volatile int totalTime = 0;
     static volatile int timeRemaining = 0;
+    static volatile boolean paused = false;
 
     public static void main(String[] args) {
         launch(args);
@@ -223,7 +224,9 @@ public class OverlayCountdown extends Application {
                 minsText.setText(String.format("%02d", mins));
                 secsText.setText(String.format("%02d", secs));
                 LockSupport.parkNanos(1_000_000_000);
-                timeRemaining--;
+                if (!paused) {
+                    timeRemaining--;
+                }
             }
             playNotificationSound(parent);
         });
@@ -283,7 +286,13 @@ public class OverlayCountdown extends Application {
         MenuItem resetItem = new MenuItem("Reset...");
         resetItem.setOnAction(e -> setupTimer(stage));
 
-        menu.getItems().addAll(resetItem, exitItem);
+        MenuItem pausePlayItem = new MenuItem("Pause");
+        pausePlayItem.setOnAction(e -> {
+            paused = !paused;
+            pausePlayItem.setText(paused ? "Continue" : "Pause");
+        });
+
+        menu.getItems().addAll(pausePlayItem, resetItem, exitItem);
 
         root.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.SECONDARY) {
