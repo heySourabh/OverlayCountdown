@@ -36,7 +36,7 @@ import javafx.stage.StageStyle;
 
 /**
  *
- * @author Sourabh Bhat
+ * @author Sourabh Bhat <heySourabh@gmail.com>
  */
 public class OverlayCountdown extends Application {
 
