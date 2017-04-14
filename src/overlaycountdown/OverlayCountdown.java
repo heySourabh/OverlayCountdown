@@ -113,9 +113,9 @@ public class OverlayCountdown extends Application {
         if (timeInSecs != 0) {
             timeRemaining = timeInSecs;
             totalTime = timeInSecs;
-        }
-        if (!timerRunning) {
-            startTimer(primaryStage);
+            if (!timerRunning) {
+                startTimer(primaryStage);
+            }
         }
         return timeInSecs;
     }
