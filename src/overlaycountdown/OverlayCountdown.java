@@ -5,6 +5,7 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.Predicate;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
@@ -14,6 +15,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Glow;
@@ -23,6 +25,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
@@ -43,6 +46,9 @@ public class OverlayCountdown extends Application {
     static String displayMessage = "Time Up!!";
     static volatile int totalTime = 0;
     static volatile int timeRemaining = 0;
+    boolean timerRunning = false;
+    static SimpleDoubleProperty timerProgressProperty = new SimpleDoubleProperty(1.0);
+    Text hrsText, minsText, secsText;
     static volatile boolean paused = false;
 
     public static void main(String[] args) {
@@ -51,23 +57,31 @@ public class OverlayCountdown extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Text hrs = new Text("00");
-        hrs.setFont(Font.font(FONT_SIZE));
+        hrsText = new Text("00");
+        hrsText.setFont(Font.font(FONT_SIZE));
 
         Text colon1 = new Text(":");
         colon1.setFont(Font.font(FONT_SIZE));
 
-        Text mins = new Text("00");
-        mins.setFont(Font.font(FONT_SIZE));
+        minsText = new Text("00");
+        minsText.setFont(Font.font(FONT_SIZE));
 
         Text colon2 = new Text(":");
         colon2.setFont(Font.font(FONT_SIZE));
 
-        Text secs = new Text("00");
-        secs.setFont(Font.font(FONT_SIZE));
+        secsText = new Text("00");
+        secsText.setFont(Font.font(FONT_SIZE));
 
-        HBox root = new HBox(hrs, colon1, mins, colon2, secs);
+        HBox timer = new HBox(hrsText, colon1, minsText, colon2, secsText);
+        timer.setBackground(Background.EMPTY);
+
+        ProgressBar timerProgress = new ProgressBar(1.0);
+        timerProgress.progressProperty().bind(timerProgressProperty);
+
+        VBox root = new VBox(timer, timerProgress);
+        root.setFillWidth(true);
         root.setBackground(Background.EMPTY);
+        root.setAlignment(Pos.CENTER);
         DropShadow shadow = new DropShadow(3, 2, 5, Color.GRAY);
         Glow glow = new Glow(0.5);
         root.setEffect(shadow);
@@ -91,7 +105,6 @@ public class OverlayCountdown extends Application {
         if (timeInSecs == 0) {
             Platform.exit();
         }
-        startTimer(hrs, mins, secs, primaryStage);
     }
 
     private int setupTimer(Stage primaryStage) {
@@ -100,6 +113,9 @@ public class OverlayCountdown extends Application {
         if (timeInSecs != 0) {
             timeRemaining = timeInSecs;
             totalTime = timeInSecs;
+        }
+        if (!timerRunning) {
+            startTimer(primaryStage);
         }
         return timeInSecs;
     }
@@ -213,7 +229,8 @@ public class OverlayCountdown extends Application {
         return (num < 0) ? 0 : num;
     }
 
-    private void startTimer(Text hrsText, Text minsText, Text secsText, Stage parent) {
+    private void startTimer(Stage parent) {
+        timerRunning = true;
         Thread timerThread = new Thread(() -> {
             while (timeRemaining >= 0 && parent.isShowing()) {
                 int hrs = timeRemaining / 60 / 60;
@@ -227,8 +244,12 @@ public class OverlayCountdown extends Application {
                 if (!paused) {
                     timeRemaining--;
                 }
+                Platform.runLater(() -> {
+                    timerProgressProperty.set(1.0 * timeRemaining / totalTime);
+                });
             }
             playNotificationSound(parent);
+            timerRunning = false;
         });
         timerThread.start();
     }
@@ -249,7 +270,7 @@ public class OverlayCountdown extends Application {
             timeUpAlert.initOwner(parent);
             timeUpAlert.showAndWait();
             mp.stop();
-            parent.hide();
+            //parent.hide();
         });
     }
 
