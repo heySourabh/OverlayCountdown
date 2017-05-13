@@ -1,5 +1,9 @@
 # OverlayCountdown
-A simple timer written in JavaFx
+A simple timer written in JavaFx.
+
+If Java 8 is installed, then you can just make executable and run:
+
+./timer.sh
 
 Below is a sample screenshot of the program while resetting the time.
 
